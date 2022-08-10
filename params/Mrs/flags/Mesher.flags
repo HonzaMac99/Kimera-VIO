@@ -8,8 +8,7 @@
 # Visualization.
 --visualize_histogram_1D=false
 --log_histogram_1D=false
-#--visualize_histogram_2D=false
---visualize_histogram_2D=true
+--visualize_histogram_2D=false
 --log_histogram_2D=false
 
 # Mesh filters.
