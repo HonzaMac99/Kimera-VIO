@@ -4,7 +4,7 @@
 
 # Specify path of the EuRoC dataset.
 # The path can be absolute, or relative to this file location.
-DATASET_PATH="~/kimera_ws/datasets/V1_01_easy"
+DATASET_PATH="/home/honzamac/kimera_ws/datasets/V1_01_easy"
 
 # Specify: 0 to run on EuRoC data, 1 to run on Kitti (not supported)
 DATASET_TYPE=0
