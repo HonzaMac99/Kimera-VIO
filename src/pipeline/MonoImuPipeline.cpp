@@ -128,12 +128,13 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
   //           MesherType::PROJECTIVE,
   //           MesherParams(camera_->getBodyPoseCam(),
   //                        params.camera_params_.at(0u).image_size_)));
-
   //   //! Register input callbacks
   //   vio_backend_module_->registerOutputCallback(
   //       std::bind(&MesherModule::fillBackendQueue,
   //                 std::ref(*CHECK_NOTNULL(mesher_module_.get())),
   //                 std::placeholders::_1));
+
+  
 
   //   vio_frontend_module_->registerOutputCallback(
   //       std::bind(&MesherModule::fillFrontendQueue,

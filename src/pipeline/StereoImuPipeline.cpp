@@ -132,6 +132,7 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
                   std::placeholders::_1));
 
     auto& mesher_module = mesher_module_;
+
     vio_frontend_module_->registerOutputCallback(
         [&mesher_module](const FrontendOutputPacketBase::Ptr& output) {
           StereoFrontendOutput::Ptr converted_output =
