@@ -25,7 +25,9 @@ class MesherModule : public MIMOPipelineModule<MesherInput, MesherOutput> {
  public:
   KIMERA_POINTER_TYPEDEFS(MesherModule);
   KIMERA_DELETE_COPY_CONSTRUCTORS(MesherModule);
-  using MesherFrontendInput = StereoFrontendOutput::Ptr;
+  // using MesherFrontendInput = StereoFrontendOutput::Ptr;   // this is original
+  // using MesherFrontendInput = MonoFrontendOutput::Ptr;   // this is edited 
+  using MesherFrontendInput = FrontendOutputPacketBase::Ptr; // this is edited
   using MesherBackendInput = BackendOutput::Ptr;
   // TODO(Toni): using this callback generates copies...
   using MesherOutputCallback = std::function<void(const MesherOutput& output)>;
@@ -34,7 +36,7 @@ class MesherModule : public MIMOPipelineModule<MesherInput, MesherOutput> {
   virtual ~MesherModule() = default;
 
   //! Callbacks to fill queues: they should be all lighting fast.
-  inline void fillFrontendQueue(const MesherFrontendInput& frontend_payload) {
+  inline void fillFrontendQueue(MesherFrontendInput& frontend_payload) {
     frontend_payload_queue_.push(frontend_payload);
   }
   inline void fillBackendQueue(const MesherBackendInput& backend_payload) {

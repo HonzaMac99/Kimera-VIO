@@ -39,16 +39,17 @@ struct MonoFrontendOutput : public FrontendOutputPacketBase {
   KIMERA_POINTER_TYPEDEFS(MonoFrontendOutput);
   KIMERA_DELETE_COPY_CONSTRUCTORS(MonoFrontendOutput);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  MonoFrontendOutput(const bool& is_keyframe,
-                     const StatusMonoMeasurementsPtr& status_mono_measurements,
-                     const TrackingStatus& tracker_status,
-                     const gtsam::Pose3& relative_pose_body,
-                     const gtsam::Pose3& b_Pose_cam_rect,
-                     const Frame& frame_lkf,
-                     const ImuFrontend::PimPtr& pim,
-                     const ImuAccGyrS& imu_acc_gyrs,
-                     const cv::Mat& feature_tracks,
-                     const DebugTrackerInfo& debug_tracker_info)
+  MonoFrontendOutput(
+      const bool& is_keyframe,
+      const StatusMonoMeasurementsPtr& status_mono_measurements,
+      const TrackingStatus& tracker_status,
+      const gtsam::Pose3& relative_pose_body,
+      const gtsam::Pose3& b_Pose_cam_rect,
+      const Frame& frame_lkf,
+      const ImuFrontend::PimPtr& pim,
+      const ImuAccGyrS& imu_acc_gyrs,
+      const cv::Mat& feature_tracks,
+      const DebugTrackerInfo& debug_tracker_info)
       : FrontendOutputPacketBase(frame_lkf.timestamp_,
                                  is_keyframe,
                                  FrontendType::kMonoImu,
@@ -74,3 +75,7 @@ struct MonoFrontendOutput : public FrontendOutputPacketBase {
 };
 
 }  // namespace VIO
+
+
+
+

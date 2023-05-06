@@ -10,16 +10,11 @@
  * @file   MonoDataProviderModule.h
  * @brief  Pipeline module that provides data to the VIO pipeline.
  * @details Collects camera and IMU data, publishes monocular images via
- * callback
- *          getInputPacket processes one monocular images at a time, attempting
- * to
- *          gather IMU data between the current monocular images and the
- * previous
- *          monocular images.
+ * callback getInputPacket processes one monocular images at a time, attempting
+ * to gather IMU data between the current monocular images and the
+ * previous monocular images.
  * output_queue is unused-- the resulting bundle (IMU + monocular images, called
- * a
- *          monocular imagesImuSyncPacket) is published via
- * registerVioPipelineCallback.
+ * a monocular imagesImuSyncPacket) is published via registerVioPipelineCallback.
  * @author Antoni Rosinol
  */
 

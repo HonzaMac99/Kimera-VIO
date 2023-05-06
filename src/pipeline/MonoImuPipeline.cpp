@@ -62,7 +62,7 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
           FLAGS_visualize ? &display_input_queue_ : nullptr,
           FLAGS_log_output));
 
-  auto& backend_input_queue = backend_input_queue_;
+  auto& backend_input_queue = backend_input_queue_;  //! for the lambda below
   vio_frontend_module_->registerOutputCallback([&backend_input_queue](
       const FrontendOutputPacketBase::Ptr& output) {
     MonoFrontendOutput::Ptr converted_output = 
@@ -119,28 +119,53 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
                 std::cref(*CHECK_NOTNULL(vio_frontend_module_.get())),
                 std::placeholders::_1));
 
-  // TOOD(marcus): enable use of mesher for mono pipeline
-  // if (static_cast<VisualizationType>(FLAGS_viz_type) ==
-  //     VisualizationType::kMesh2dTo3dSparse) {
-  //   mesher_module_ = VIO::make_unique<MesherModule>(
-  //       parallel_run_,
-  //       MesherFactory::createMesher(
-  //           MesherType::PROJECTIVE,
-  //           MesherParams(camera_->getBodyPoseCam(),
-  //                        params.camera_params_.at(0u).image_size_)));
-  //   //! Register input callbacks
-  //   vio_backend_module_->registerOutputCallback(
-  //       std::bind(&MesherModule::fillBackendQueue,
-  //                 std::ref(*CHECK_NOTNULL(mesher_module_.get())),
-  //                 std::placeholders::_1));
+  // MESHER ========================================================================
 
+  // TODO(marcus): enable use of mesher for mono pipeline
+  // -> enabled by myself 
+  if (static_cast<VisualizationType>(FLAGS_viz_type) ==
+      VisualizationType::kMesh2dTo3dSparse) {
+    mesher_module_ = VIO::make_unique<MesherModule>(
+        parallel_run_,
+        MesherFactory::createMesher(
+            MesherType::PROJECTIVE,
+            MesherParams(camera_->getBodyPoseCam(),
+                         params.camera_params_.at(0u).image_size_)));
+
+    //! Register input callbacks
+    vio_backend_module_->registerOutputCallback(
+        std::bind(&MesherModule::fillBackendQueue,
+                  std::ref(*CHECK_NOTNULL(mesher_module_.get())),
+                  std::placeholders::_1));
+
+    // TODO: check if mesher input is of type MonoFrontendOutput
+    // TODO: MesherModule.h -> fillFrontendQueue ( StereoFrontendOutput::Ptr& )
+    // -> check whether Mono Frontend produces MonoFrontendOutput or
+    // StereoFrontendOutput and if mono, then change the: 
+    // using MesherFrontendInput = StereoFrontendOutput::Ptr; in MesherModule.h
+    // to using MesherFrontendInput = MonoFrontendOutput::Ptr;
   
+    auto& mesher_module = mesher_module_;
 
-  //   vio_frontend_module_->registerOutputCallback(
-  //       std::bind(&MesherModule::fillFrontendQueue,
-  //                 std::ref(*CHECK_NOTNULL(mesher_module_.get())),
-  //                 std::placeholders::_1));
-  // }
+    vio_frontend_module_->registerOutputCallback(
+        [&mesher_module](const FrontendOutputPacketBase::Ptr& output) {
+          MonoFrontendOutput::Ptr converted_output =
+              VIO::safeCast<FrontendOutputPacketBase, MonoFrontendOutput>(output);
+          CHECK_NOTNULL(mesher_module.get())
+              ->fillFrontendQueue(converted_output);
+          // StereoFrontendOutput::Ptr converted_output =
+          //     VIO::safeCast<FrontendOutputPacketBase, StereoFrontendOutput>(output);
+          // CHECK_NOTNULL(mesher_module.get())
+          //     ->fillFrontendQueue(converted_output);
+        });
+    
+    // // default implementation
+    // vio_frontend_module_->registerOutputCallback(
+    //     std::bind(&MesherModule::fillFrontendQueue,
+    //               std::ref(*CHECK_NOTNULL(mesher_module_.get())),
+    //               std::placeholders::_1));
+  }
+  // END ===========================================================================
 
   if (FLAGS_use_lcd) {
     lcd_module_ = VIO::make_unique<LcdModule>(
@@ -190,18 +215,19 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
     vio_frontend_module_->registerOutputCallback(
         [&visualizer_module](const FrontendOutputPacketBase::Ptr& output) {
           MonoFrontendOutput::Ptr converted_output =
-              VIO::safeCast<FrontendOutputPacketBase, MonoFrontendOutput>(
-                  output);
+              VIO::safeCast<FrontendOutputPacketBase, MonoFrontendOutput>(output);
           CHECK_NOTNULL(visualizer_module.get())
               ->fillFrontendQueue(converted_output);
     });
 
-    // if (mesher_module_) {
-    //   mesher_module_->registerOutputCallback(
-    //       std::bind(&VisualizerModule::fillMesherQueue,
-    //                 std::ref(*CHECK_NOTNULL(visualizer_module_.get())),
-    //                 std::placeholders::_1));
-    // }
+    // MESHER ========================================================================
+    if (mesher_module_) {
+      mesher_module_->registerOutputCallback(
+          std::bind(&VisualizerModule::fillMesherQueue,
+                    std::ref(*CHECK_NOTNULL(visualizer_module_.get())),
+                    std::placeholders::_1));
+    }
+    // END ===========================================================================
 
     if (lcd_module_) {
       lcd_module_->registerOutputCallback(

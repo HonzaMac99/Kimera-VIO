@@ -29,3 +29,7 @@
 
 % Ignore python bytecode
 *.pyc
+
+% Ignore vim swap files
+*.swp
+

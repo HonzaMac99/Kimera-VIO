@@ -134,7 +134,7 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
     auto& mesher_module = mesher_module_;
 
     vio_frontend_module_->registerOutputCallback(
-        [&mesher_module](const FrontendOutputPacketBase::Ptr& output) {
+        [&mesher_module](FrontendOutputPacketBase::Ptr& output) {
           StereoFrontendOutput::Ptr converted_output =
               VIO::safeCast<FrontendOutputPacketBase, StereoFrontendOutput>(output);
           CHECK_NOTNULL(mesher_module.get())
@@ -190,7 +190,7 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
               VIO::safeCast<FrontendOutputPacketBase, StereoFrontendOutput>(output);
           CHECK_NOTNULL(visualizer_module.get())
               ->fillFrontendQueue(converted_output);
-        });
+    });
 
     if (mesher_module_) {
       mesher_module_->registerOutputCallback(

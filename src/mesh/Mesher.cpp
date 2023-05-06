@@ -29,6 +29,8 @@
 
 #include "kimera-vio/utils/Statistics.h"
 #include "kimera-vio/utils/Timer.h"
+//#include "kimera-vio/common/vio_types.h"
+//#include "kimera-vio/frontend/MonoVisionImuFrontend-definitions.h"
 
 // General functionality for the mesher.
 DEFINE_bool(add_extra_lmks_from_stereo,
@@ -1440,25 +1442,55 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
 void Mesher::updateMesh3D(const MesherInput& mesher_payload,
                           Mesh2D* mesh_2d,
                           std::vector<cv::Vec6f>* mesh_2d_for_viz) {
-  const StereoFrame& stereo_frame =
-      mesher_payload.frontend_output_->stereo_frame_lkf_;
-  const StatusKeypointsCV& right_keypoints = 
-      stereo_frame.right_keypoints_rectified_;
-  std::vector<KeypointStatus> right_keypoint_status;
-  right_keypoint_status.reserve(right_keypoints.size());
-  for (const StatusKeypointCV& kpt : right_keypoints) {
-    right_keypoint_status.push_back(kpt.first);
-  }
 
-  updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,
-               stereo_frame.left_frame_.keypoints_,
-               right_keypoint_status,
-               stereo_frame.keypoints_3d_,
-               stereo_frame.left_frame_.landmarks_,
-               mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(
-                   mesher_params_.B_Pose_camLrect_),
-               mesh_2d,
-               mesh_2d_for_viz);
+// TODO: utilize this somehow, maybe with correct use of "using/typename"
+#define stereoCast VIO::safeCast<FrontendOutputPacketBase, StereoFrontendOutput>
+#define monoCast VIO::safeCast<FrontendOutputPacketBase, MonoFrontendOutput>
+
+  if (mesher_payload.frontend_output_->frontend_type_ 
+      == FrontendType::kStereoImu) 
+  {
+    const StereoFrame& stereo_frame = 
+      stereoCast(mesher_payload.frontend_output_)->stereo_frame_lkf_; 
+    const StatusKeypointsCV& right_keypoints = 
+            stereo_frame.right_keypoints_rectified_; 
+    std::vector<KeypointStatus> right_keypoint_status;
+    right_keypoint_status.reserve(right_keypoints.size());
+    for (const StatusKeypointCV& kpt : right_keypoints) {
+      right_keypoint_status.push_back(kpt.first);
+    }
+
+    updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,
+                 stereo_frame.left_frame_.keypoints_,
+                 right_keypoint_status,
+                 stereo_frame.keypoints_3d_,
+                 stereo_frame.left_frame_.landmarks_,
+                 mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(
+                     mesher_params_.B_Pose_camLrect_),
+                 mesh_2d,
+                 mesh_2d_for_viz);
+  }
+  else if (mesher_payload.frontend_output_->frontend_type_ 
+      == FrontendType::kMonoImu)
+  {
+    const Frame& frame = monoCast(mesher_payload.frontend_output_)->frame_lkf_;
+    const StatusKeypointsCV& keypoints = frame.keypoints_undistorted_;
+    std::vector<KeypointStatus> keypoint_status;
+    keypoint_status.reserve(keypoints.size());
+    for (const StatusKeypointCV& kpt : keypoints) {
+      keypoint_status.push_back(kpt.first);
+    }
+
+    updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,
+                 frame.keypoints_,
+                 keypoint_status,
+                 std::vector<gtsam::Vector3>(), // no stereo 3D keypoints 
+                 frame.landmarks_,
+                 mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(
+                     mesher_params_.B_Pose_camLrect_),
+                 mesh_2d,
+                 mesh_2d_for_viz);
+  }
 }
 
 /* -------------------------------------------------------------------------- */
