@@ -40,6 +40,8 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
   // CHECK_EQ(params.camera_params_.size(), 1u) << "Need one camera for MonoImuPipeline.";
   camera_ = std::make_shared<Camera>(params.camera_params_.at(0));
 
+  // my_note: Is the MonoDataProviderModule used in ros??
+  // -> it is checked in the Pipeline::Spin() function, which is run by ros, meaning??
   data_provider_module_ = VIO::make_unique<MonoDataProviderModule>(
       &frontend_input_queue_,
       "Mono Data Provider",
@@ -120,9 +122,8 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
                 std::placeholders::_1));
 
   // MESHER ========================================================================
-
-  // TODO(marcus): enable use of mesher for mono pipeline
-  // -> enabled by myself 
+  // use of mesher for mono pipeline enabled
+  
   if (static_cast<VisualizationType>(FLAGS_viz_type) ==
       VisualizationType::kMesh2dTo3dSparse) {
     mesher_module_ = VIO::make_unique<MesherModule>(
@@ -138,13 +139,6 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
                   std::ref(*CHECK_NOTNULL(mesher_module_.get())),
                   std::placeholders::_1));
 
-    // TODO: check if mesher input is of type MonoFrontendOutput
-    // TODO: MesherModule.h -> fillFrontendQueue ( StereoFrontendOutput::Ptr& )
-    // -> check whether Mono Frontend produces MonoFrontendOutput or
-    // StereoFrontendOutput and if mono, then change the: 
-    // using MesherFrontendInput = StereoFrontendOutput::Ptr; in MesherModule.h
-    // to using MesherFrontendInput = MonoFrontendOutput::Ptr;
-  
     auto& mesher_module = mesher_module_;
 
     vio_frontend_module_->registerOutputCallback(
@@ -153,17 +147,8 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
               VIO::safeCast<FrontendOutputPacketBase, MonoFrontendOutput>(output);
           CHECK_NOTNULL(mesher_module.get())
               ->fillFrontendQueue(converted_output);
-          // StereoFrontendOutput::Ptr converted_output =
-          //     VIO::safeCast<FrontendOutputPacketBase, StereoFrontendOutput>(output);
-          // CHECK_NOTNULL(mesher_module.get())
-          //     ->fillFrontendQueue(converted_output);
         });
-    
-    // // default implementation
-    // vio_frontend_module_->registerOutputCallback(
-    //     std::bind(&MesherModule::fillFrontendQueue,
-    //               std::ref(*CHECK_NOTNULL(mesher_module_.get())),
-    //               std::placeholders::_1));
+
   }
   // END ===========================================================================
 
@@ -180,6 +165,7 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
         std::bind(&LcdModule::fillBackendQueue,
                   std::ref(*CHECK_NOTNULL(lcd_module_.get())),
                   std::placeholders::_1));
+
     vio_frontend_module_->registerOutputCallback(
         std::bind(&LcdModule::fillFrontendQueue,
                   std::ref(*CHECK_NOTNULL(lcd_module_.get())),

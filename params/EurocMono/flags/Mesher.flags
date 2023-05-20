@@ -1,7 +1,9 @@
 #!/bin/bash
 # Mesher parameters.
 # General functionality for the mesher.
---add_extra_lmks_from_stereo=false #originally true
+
+#--add_extra_lmks_from_stereo=true # originally value 
+--add_extra_lmks_from_stereo=false
 --reduce_mesh_to_time_horizon=true
 --compute_per_vertex_normals=false
 

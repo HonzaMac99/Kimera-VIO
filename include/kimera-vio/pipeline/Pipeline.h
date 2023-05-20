@@ -247,6 +247,7 @@ class Pipeline {
 
   //! Vision Frontend payloads.
   VisionImuFrontendModule::InputQueue frontend_input_queue_;
+  // note: this is ThreadsafeQueue<typename SIMO::InputUniquePtr>
 
   //! Backend
   VioBackendModule::UniquePtr vio_backend_module_;

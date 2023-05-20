@@ -7,12 +7,16 @@ imu_preintegration_type: 1
 # These are Euroc Dataset parameters
 # Sensor extrinsics wrt. the body-frame.
 T_BS:
-  cols: 4
-  rows: 4
-  data: [1.0, 0.0, 0.0, 0.0,
-         0.0, 1.0, 0.0, 0.0,
-         0.0, 0.0, 1.0, 0.0,
-         0.0, 0.0, 0.0, 1.0]
+# IDENTITY:
+   cols: 4
+   rows: 4
+   data: [1.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0,
+          0.0, 0.0, 1.0, 0.0,
+          0.0, 0.0, 0.0, 1.0]
+## RFU_TO_BDR:
+#   the IMU T_BS must be identity otw. the pipeline init check fails
+
 rate_hz: 200
 
 # inertial sensor noise model parameters (static)

@@ -1380,30 +1380,35 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
       << "Missing landmark information to build 3D Mesh.";
   const PointsWithIdMap* points_with_id_all = &points_with_id_VIO;
 
-  // Get points in stereo camera that are not in vio but have lmk id:
-  PointsWithIdMap points_with_id_stereo;
-  // TODO(Toni): allow for only seeing stereo mesh
-  if (FLAGS_add_extra_lmks_from_stereo) {
-    // Append vio points.
-    // WARNING some stereo and vio lmks share the same id, so adding order
-    // matters! first add vio points, then stereo, so that vio points have
-    // preference over stereo ones if they are repeated!
-    static constexpr bool kAppendStereoLmks = true;
-    if (kAppendStereoLmks) {
-      points_with_id_stereo = points_with_id_VIO;
-    }
-    appendNonVioStereoPoints(landmarks,
-                             keypoints_status,
-                             keypoints_3d,
-                             left_camera_pose,
-                             &points_with_id_stereo);
-    VLOG(20) << "Number of stereo landmarks used for the mesh: "
-             << points_with_id_stereo.size() << "\n"
-             << "Number of VIO landmarks used for the mesh: "
-             << points_with_id_VIO.size();
+  // in mono variant there are no keypoints_3d
+  if (keypoints_3d.size()) {
 
-    points_with_id_all = &points_with_id_stereo;
+    // Get points in stereo camera that are not in vio but have lmk id:
+    PointsWithIdMap points_with_id_stereo;
+    // TODO(Toni): allow for only seeing stereo mesh
+    if (FLAGS_add_extra_lmks_from_stereo) {
+      // Append vio points.
+      // WARNING some stereo and vio lmks share the same id, so adding order
+      // matters! first add vio points, then stereo, so that vio points have
+      // preference over stereo ones if they are repeated!
+      static constexpr bool kAppendStereoLmks = true;
+      if (kAppendStereoLmks) {
+        points_with_id_stereo = points_with_id_VIO;
+      }
+      appendNonVioStereoPoints(landmarks,
+                               keypoints_status,
+                               keypoints_3d,
+                               left_camera_pose,
+                               &points_with_id_stereo);
+      VLOG(20) << "Number of stereo landmarks used for the mesh: "
+               << points_with_id_stereo.size() << "\n"
+               << "Number of VIO landmarks used for the mesh: "
+               << points_with_id_VIO.size();
+
+      points_with_id_all = &points_with_id_stereo;
+    }
   }
+
   LOG_IF(WARNING, points_with_id_all->size() == 0u)
       << "Missing landmark information for the Mesher!";
   VLOG(20) << "Total number of landmarks used for the mesh: "
@@ -1436,6 +1441,18 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
   VLOG(10) << "Finished updateMesh3D.";
 }
 
+
+inline std::shared_ptr<StereoFrontendOutput> 
+stereoCast(const std::shared_ptr<FrontendOutputPacketBase>& base_ptr) {
+    return VIO::safeCast<FrontendOutputPacketBase, StereoFrontendOutput>(base_ptr);
+}
+
+
+inline std::shared_ptr<MonoFrontendOutput> 
+monoCast(const std::shared_ptr<FrontendOutputPacketBase>& base_ptr) {
+    return VIO::safeCast<FrontendOutputPacketBase, MonoFrontendOutput>(base_ptr);
+}
+
 /* -------------------------------------------------------------------------- */
 // Update mesh, but in a thread-safe way.
 // TODO(TONI): this seems completely unnecessary
@@ -1443,13 +1460,10 @@ void Mesher::updateMesh3D(const MesherInput& mesher_payload,
                           Mesh2D* mesh_2d,
                           std::vector<cv::Vec6f>* mesh_2d_for_viz) {
 
-// TODO: utilize this somehow, maybe with correct use of "using/typename"
-#define stereoCast VIO::safeCast<FrontendOutputPacketBase, StereoFrontendOutput>
-#define monoCast VIO::safeCast<FrontendOutputPacketBase, MonoFrontendOutput>
-
+  // Original stereo variant
   if (mesher_payload.frontend_output_->frontend_type_ 
-      == FrontendType::kStereoImu) 
-  {
+                                  == FrontendType::kStereoImu) {
+    LOG(INFO) << "Using mesher STEREO variant";
     const StereoFrame& stereo_frame = 
       stereoCast(mesher_payload.frontend_output_)->stereo_frame_lkf_; 
     const StatusKeypointsCV& right_keypoints = 
@@ -1470,9 +1484,10 @@ void Mesher::updateMesh3D(const MesherInput& mesher_payload,
                  mesh_2d,
                  mesh_2d_for_viz);
   }
+  // New added mono variant
   else if (mesher_payload.frontend_output_->frontend_type_ 
-      == FrontendType::kMonoImu)
-  {
+                                  == FrontendType::kMonoImu) {
+    LOG(INFO) << "Using mesher MONO variant";
     const Frame& frame = monoCast(mesher_payload.frontend_output_)->frame_lkf_;
     const StatusKeypointsCV& keypoints = frame.keypoints_undistorted_;
     std::vector<KeypointStatus> keypoint_status;
@@ -1481,13 +1496,18 @@ void Mesher::updateMesh3D(const MesherInput& mesher_payload,
       keypoint_status.push_back(kpt.first);
     }
 
+    // gtsam::Rot3 new_pose_rot = gtsam::Rot3::Quaternion(-0.5, 0.5, -0.5, 0.5);
+    // gtsam::Point3 new_pose_pos = gtsam::Point3(10, 0, 0);
+    // gtsam::Pose3 new_pose = gtsam::Pose3(new_pose_rot, new_pose_pos);
+
     updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,
                  frame.keypoints_,
-                 keypoint_status,
+                 keypoint_status, // status of frame.keypoints_ (VALID, ...)  
                  std::vector<gtsam::Vector3>(), // no stereo 3D keypoints 
                  frame.landmarks_,
                  mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(
                      mesher_params_.B_Pose_camLrect_),
+                 // new_pose.compose(mesher_params_.B_Pose_camLrect_),
                  mesh_2d,
                  mesh_2d_for_viz);
   }
